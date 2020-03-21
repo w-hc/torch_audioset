@@ -10,8 +10,14 @@ class WaveformToInput():
         self.method = method
 
     def __call__(self, waveform, sample_rate):
-        if isinstance(waveform, torch.Tensor):
-            waveform = waveform.T.numpy()
+        '''
+        Args:
+            waveform: torch tsr [num_audio_channels, num_time_steps]
+            sample_rate: per second sample rate
+        Returns:
+            batched torch tsr of shape [N, C, T]
+        '''
+        waveform = waveform.T
         func = vggish_transform if self.method == 'vggish' else yamnet_transform
         return func(waveform, sample_rate)
 
@@ -19,11 +25,11 @@ class WaveformToInput():
 def vggish_transform(waveform, sample_rate):
     '''
     Args:
-        waveform: torch tsr [1, num_channels, num_steps]
+        waveform: np tsr [num_steps, num_channels]
         sample_rate: per second sample rate
     '''
     import resampy
-    data = waveform.squeeze(axis=0)
+    data = waveform.mean(axis=1)
     # Resample to the rate assumed by VGGish.
     if sample_rate != VGGishParams.SAMPLE_RATE:
         data = resampy.resample(data, sample_rate, VGGishParams.SAMPLE_RATE)
@@ -51,20 +57,22 @@ def vggish_transform(waveform, sample_rate):
     log_mel_examples = mel_features.frame(
         log_mel, window_length=example_window_length, hop_length=example_hop_length
     )
+    # [N, T, C] -> [N, C, T]
+    log_mel_examples = torch.from_numpy(log_mel_examples).float().permute(0, 2, 1)
     return log_mel_examples
 
 
 def yamnet_transform(waveform, sample_rate):
     '''
     Args:
-        waveform: torch tsr [1, num_channels, num_steps]
+        waveform: np tsr [num_steps, num_channels]
         sample_rate: per second sample rate
     '''
     # FIXME need to make this run somehow in "eager" mode
     import tensorflow as tf
     spectrogram = features_lib.waveform_to_log_mel_spectrogram(
         tf.squeeze(waveform, axis=0), YAMNetParams
-    )
+    )  # BUG why is the squeeze here?
     patches = features_lib.spectrogram_to_patches(
         spectrogram, YAMNetParams
     )
