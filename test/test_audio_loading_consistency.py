@@ -5,6 +5,7 @@ Is PyAV slower than torchaudio? Play around and find out
 import numpy as np
 import torchaudio as ta
 import soundfile as sf
+import librosa as la
 import av
 
 
@@ -40,10 +41,18 @@ def av_load(fname):
         [af.to_ndarray().reshape(num_channels, -1) for af in frames], axis=1
     )
     container.close()
-    assert data.dtype == np.int16
-    data = data / (1. + np.iinfo(np.int16).max)
-    data = data.astype(np.float32)
+    if data.dtype == np.int16:
+        assert data.dtype == np.int16
+        data = data / (1. + np.iinfo(np.int16).max)
+        data = data.astype(np.float32)
+    assert data.dtype == np.float32
     return data, sr
+
+
+def la_load(fname):
+    x, sr = la.load(fname)
+    x = x.T
+    return x, sr
 
 
 def test_sf_internal_consistency(fname):
@@ -64,6 +73,12 @@ def test_ta_av_consistency(fname):
     assert np.allclose(ta_data, av_data)
 
 
+def test_av_la_consistency(fname):
+    la_data, sr = la_load(fname)
+    av_data, sr = av_load(fname)
+    assert np.allclose(av_data, la_data)
+
+
 def main():
     fname = '/home-nfs/whc/siren.wav'
     test_sf_internal_consistency(fname)
@@ -71,6 +86,9 @@ def main():
     # BUG torchaudio and PyAV disagree, which means that your audio visual processing
     # pipeline could all be wrong!!!
     test_ta_av_consistency(fname)
+
+    fname = '/home-nfs/whc/tv_host.mp4'
+    test_av_la_consistency(fname)  # BUG completely bad! Even the sr do not agree!
 
 
 if __name__ == "__main__":
