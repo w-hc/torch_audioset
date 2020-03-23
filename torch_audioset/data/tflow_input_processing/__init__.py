@@ -1,7 +1,7 @@
 import torch
 from .vggish_utils import mel_features
 from .yamnet_utils import features as features_lib
-from ..params import VGGishParams, YAMNetParams
+from ...params import VGGishParams, YAMNetParams
 
 
 class WaveformToInput():

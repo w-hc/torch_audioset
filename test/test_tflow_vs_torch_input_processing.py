@@ -1,8 +1,7 @@
 import numpy as np
-import torch
 import torchaudio as ta
-from torch_audioset.torch_input_processing import WaveformToInput as TorchTransform
-from torch_audioset.tflow_input_processing import WaveformToInput as TflowTransform
+from torch_audioset.data.torch_input_processing import WaveformToInput as TorchTransform
+from torch_audioset.data.tflow_input_processing import WaveformToInput as TflowTransform
 
 
 def sinusoidal_data():

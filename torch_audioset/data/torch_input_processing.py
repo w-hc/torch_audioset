@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import torchaudio.transforms as ta_trans
-from .params import CommonParams
+from ..params import CommonParams
 
 
 class WaveformToInput():
