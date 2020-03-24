@@ -12,13 +12,13 @@ class DummyDset(torch.utils.data.Dataset):
 
     @staticmethod
     def get_data():
-        num_secs = 120 * 60
+        num_secs = 1.5 * 60 * 60
         freq = 1000
         sample_rate = 44100
         t = np.linspace(0, num_secs, int(num_secs * sample_rate))
         x = np.sin(2 * np.pi * freq * t)
         # float32, [C=2, T=num_secs * sr]
-        x = x.astype(np.float32).reshape(1, -1).repeat(axis=0, repeats=2)
+        x = x.astype(np.float32).reshape(1, -1)
         return x, sample_rate
 
     def __len__(self):
