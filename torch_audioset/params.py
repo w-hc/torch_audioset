@@ -22,9 +22,9 @@ class CommonParams():
     # convert input audio to segments
     PATCH_WINDOW_IN_SECONDS = 0.96
 
-    # largest batch size at test time
-    VGGISH_BATCH_SIZE = 16
-    YAMNET_BATCH_SIZE = 32
+    # largest feedforward chunk size at test time
+    VGGISH_CHUNK_SIZE = 128
+    YAMNET_CHUNK_SIZE = 256
 
 
 class VGGishParams():

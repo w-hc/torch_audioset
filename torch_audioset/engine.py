@@ -39,7 +39,7 @@ def classify_audio_dataset(dataset, output_dir):
     # 1. create model
     model = AudioLabeler(
         model=get_vggish(with_classifier=True, pretrained=True),
-        tt_batch_size=CommonParams.VGGISH_BATCH_SIZE
+        tt_chunk_size=CommonParams.VGGISH_CHUNK_SIZE
     )
     pred_category_meta = vggish_category_metadata()
 
@@ -61,13 +61,11 @@ def trivial_collate_fn(inputs):
 
 
 class AudioLabeler(torch.nn.Module):
-    def __init__(self, model, tt_batch_size):
+    def __init__(self, model, tt_chunk_size):
         super().__init__()
         self.model = model
-        self.tt_batch_size = tt_batch_size
+        self.tt_chunk_size = tt_chunk_size
         self.device = torch.device('cuda')
-        # FIXME: You have not tested resource consumption when trans mod is put to GPU
-        # FIXME what if the audio is super long i.e. 2 hours? Can that fit in GPU?
         self.data_transform = WaveformToInput()
         self.to(self.device)
 
@@ -77,11 +75,11 @@ class AudioLabeler(torch.nn.Module):
         overall_preds = []
         for payload in inputs:
             data, sr = payload['data'], payload['sr']
-            # TODO move the waveform data to GPU and see if there is a speed boost
             data = data.to(self.device)
             # FIXME not enough metadata returned
             data = self.data_transform(data, sr)
-            chunks = data.split(self.tt_batch_size, dim=0)
+            print("shape {}".format(data.shape))
+            chunks = data.split(self.tt_chunk_size, dim=0)
             accu = []
             for chu in chunks:
                 pred = self.model(chu)  # [chunk_size, num_cats]
