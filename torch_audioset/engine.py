@@ -76,7 +76,6 @@ class AudioLabeler(torch.nn.Module):
             data, sr = payload['data'], payload['sr']
             data = data.to(self.device)
             data = self.data_transform(data, sr)
-            print("shape {}".format(data.shape))
             chunks = data.split(self.tt_chunk_size, dim=0)
             accu = []
             for chu in chunks:
