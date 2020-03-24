@@ -76,7 +76,6 @@ class AudioLabeler(torch.nn.Module):
         for payload in inputs:
             data, sr = payload['data'], payload['sr']
             data = data.to(self.device)
-            # FIXME not enough metadata returned
             data = self.data_transform(data, sr)
             print("shape {}".format(data.shape))
             chunks = data.split(self.tt_chunk_size, dim=0)
@@ -87,7 +86,7 @@ class AudioLabeler(torch.nn.Module):
             accu = torch.cat(accu, dim=0)
             overall_preds.append({
                 'pred_tsr': accu,
-            })  # FIXME need metadata for number of chunks, etc
+            })
         return overall_preds
 
 
@@ -142,9 +141,8 @@ class SoundLabelingEvaluator(DatasetEvaluator):
             pred = {
                 'id': audio_id,
                 'category_tsr_fname': category_tsr_fname,
-                'scanned_segment': '',
-                'scanned_num_chunks': '',
-                'per_chunk_length': '',
+                # 'scanned_segment': '',
+                'per_chunk_length': CommonParams.PATCH_WINDOW_IN_SECONDS,
                 'meta': '' if 'meta' not in in_payload else in_payload['meta']
             }
             self._predictions.append(pred)
