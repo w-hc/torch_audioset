@@ -4,8 +4,9 @@ import torchaudio.transforms as ta_trans
 from ..params import CommonParams
 
 
-class WaveformToInput():
+class WaveformToInput(torch.nn.Module):
     def __init__(self):
+        super().__init__()
         audio_sample_rate = CommonParams.TARGET_SAMPLE_RATE
         window_length_samples = int(round(
             audio_sample_rate * CommonParams.STFT_WINDOW_LENGTH_SECONDS
@@ -36,25 +37,22 @@ class WaveformToInput():
         Returns:
             batched torch tsr of shape [N, C, T]
         '''
-        waveform = torch.from_numpy(waveform)
-        # TODO move the waveform data to GPU and see if there is a speed boost
-
         x = waveform.mean(axis=0, keepdims=True)  # average over channels
         resampler = ta_trans.Resample(sample_rate, CommonParams.TARGET_SAMPLE_RATE)
         x = resampler(x)
         x = self.mel_trans_ope(x)
-        x = x.squeeze(dim=0)  # # [1, C, T] -> [C, T]
+        x = x.squeeze(dim=0).T  # # [1, C, T] -> [T, C]
 
         window_size_in_frames = int(round(
             CommonParams.PATCH_WINDOW_IN_SECONDS / CommonParams.STFT_HOP_LENGTH_SECONDS
         ))
-        num_chunks = x.shape[1] // window_size_in_frames
+        num_chunks = x.shape[0] // window_size_in_frames
 
         # reshape into chunks of non-overlapping sliding window
         num_frames_to_use = num_chunks * window_size_in_frames
-        x = x[:, :num_frames_to_use]
-        x = x.reshape(-1, num_chunks, window_size_in_frames)
-        x = x.permute(1, 0, 2)  # [C, N, T] ->  [N, C, T]
+        x = x[:num_frames_to_use]
+        # [num_chunks, 1, window_size, num_freq]
+        x = x.reshape(num_chunks, 1, window_size_in_frames, x.shape[-1])
         return x
 
 

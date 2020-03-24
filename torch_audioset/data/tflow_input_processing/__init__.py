@@ -57,8 +57,8 @@ def vggish_transform(waveform, sample_rate):
     log_mel_examples = mel_features.frame(
         log_mel, window_length=example_window_length, hop_length=example_hop_length
     )
-    # [N, T, C] -> [N, C, T]
-    log_mel_examples = torch.from_numpy(log_mel_examples).float().permute(0, 2, 1)
+    # [N, T, C] -> [N, 1, T, C]
+    log_mel_examples = torch.from_numpy(log_mel_examples).float().unsqueeze(1)
     return log_mel_examples
 
 
