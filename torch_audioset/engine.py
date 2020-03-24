@@ -75,16 +75,23 @@ class AudioLabeler(torch.nn.Module):
         overall_preds = []
         for payload in inputs:
             data, sr = payload['data'], payload['sr']
-            data = data.to(self.device)
-            data = self.data_transform(data, sr)
-            chunks = data.split(self.tt_chunk_size, dim=0)
-            accu = []
-            for chu in chunks:
-                pred = self.model(chu)  # [chunk_size, num_cats]
-                accu.append(pred.cpu())
-            accu = torch.cat(accu, dim=0)
+            # almost an hour for a segment
+            num_frames_per_segment = int(3600 * CommonParams.PATCH_WINDOW_IN_SECONDS * sr)
+            hourly_segments = data.split(num_frames_per_segment, dim=1)
+            hourly_accu = []
+            for segment in hourly_segments:
+                segment = segment.to(self.device)
+                segment = self.data_transform(segment, sr)
+                chunks = segment.split(self.tt_chunk_size, dim=0)
+                accu = []
+                for chu in chunks:
+                    pred = self.model(chu)  # [chunk_size, num_cats]
+                    accu.append(pred.cpu())
+                accu = torch.cat(accu, dim=0)
+                hourly_accu.append(accu)
+            hourly_accu = torch.cat(hourly_accu, dim=0)  # [num_hours, num_chunks, ]
             overall_preds.append({
-                'pred_tsr': accu,
+                'pred_tsr': hourly_accu,
             })
         return overall_preds
 
