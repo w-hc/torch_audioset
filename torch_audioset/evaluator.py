@@ -6,8 +6,8 @@ from collections import OrderedDict
 from contextlib import contextmanager
 import torch
 
-from ..utils.comm import is_main_process
-from ..utils.logger import log_every_n_seconds
+from .utils.comm import is_main_process
+from .utils.logger import log_every_n_seconds
 
 
 class DatasetEvaluator:

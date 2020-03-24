@@ -7,7 +7,7 @@ import numpy as np
 from .params import CommonParams
 from .utils.logger import setup_logger
 from .utils import comm
-from .evaluation import inference_on_dataset, DatasetEvaluator
+from .evaluator import inference_on_dataset, DatasetEvaluator
 from .vggish import get_vggish, vggish_category_metadata
 from .data.torch_input_processing import WaveformToInput
 
