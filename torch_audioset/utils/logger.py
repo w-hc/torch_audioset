@@ -10,8 +10,8 @@ from tabulate import tabulate
 from termcolor import colored
 
 
-_LOGGING_ROOT_ = 'moth'
-_ABBREV_NAME_ = 'tl'
+_LOGGING_ROOT_ = 'torch_audioset'
+_ABBREV_NAME_ = 'TAset'
 
 
 class _ColorfulFormatter(logging.Formatter):

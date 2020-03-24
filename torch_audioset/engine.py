@@ -1,0 +1,168 @@
+import logging
+import os
+import os.path as osp
+import json
+import torch
+import numpy as np
+from .params import CommonParams
+from .utils.logger import setup_logger
+from .utils import comm
+from .evaluation import inference_on_dataset, DatasetEvaluator
+from .vggish import get_vggish, vggish_category_metadata
+from .data.torch_input_processing import WaveformToInput
+
+import itertools
+from collections import OrderedDict
+
+
+'''
+General labeling strategy:
+Label each audio one-by-one, for all the chunks, and save them inside what not
+'''
+
+
+def setup():
+    """
+    Perform some basic common setups at the beginning of a job. For now, only:
+    1. Set up the logger
+    """
+    rank = comm.get_rank()
+    logger = logging.getLogger(__name__)
+    if not logger.isEnabledFor(logging.INFO):
+        setup_logger(distributed_rank=rank)
+
+
+def classify_audio_dataset(dataset, output_dir):
+    # 0. preliminary setup
+    setup()
+
+    # 1. create model
+    model = AudioLabeler(
+        model=get_vggish(with_classifier=True, pretrained=True),
+        tt_batch_size=CommonParams.VGGISH_BATCH_SIZE
+    )
+    pred_category_meta = vggish_category_metadata()
+
+    # 2. create data loader
+    # FIXME: where to do the partitioning?
+    loader = torch.utils.data.DataLoader(
+        dataset, num_workers=0, batch_size=1, collate_fn=trivial_collate_fn,
+    )
+
+    # 3. create evaluator
+    evaluator = SoundLabelingEvaluator(output_dir, pred_category_meta)
+
+    # 4. launch inference
+    inference_on_dataset(model, loader, evaluator)
+
+
+def trivial_collate_fn(inputs):
+    return inputs
+
+
+class AudioLabeler(torch.nn.Module):
+    def __init__(self, model, tt_batch_size):
+        super().__init__()
+        self.model = model
+        self.tt_batch_size = tt_batch_size
+        self.device = torch.device('cuda')
+        # FIXME: You have not tested resource consumption when trans mod is put to GPU
+        # FIXME what if the audio is super long i.e. 2 hours? Can that fit in GPU?
+        self.data_transform = WaveformToInput()
+        self.to(self.device)
+
+    def forward(self, inputs):
+        # inference context is setup by caller
+        assert len(inputs) == 1
+        overall_preds = []
+        for payload in inputs:
+            data, sr = payload['data'], payload['sr']
+            # TODO move the waveform data to GPU and see if there is a speed boost
+            data = data.to(self.device)
+            # FIXME not enough metadata returned
+            data = self.data_transform(data, sr)
+            chunks = data.split(self.tt_batch_size, dim=0)
+            accu = []
+            for chu in chunks:
+                pred = self.model(chu)  # [chunk_size, num_cats]
+                accu.append(pred.cpu())
+            accu = torch.cat(accu, dim=0)
+            overall_preds.append({
+                'pred_tsr': accu,
+            })  # FIXME need metadata for number of chunks, etc
+        return overall_preds
+
+
+class SoundLabelingEvaluator(DatasetEvaluator):
+    """Labeling every chunk unit of a sound track
+    It saves prediction in `output_dir`
+
+    Output metadata format:
+    {
+        model: vggish,
+        model_categories: [
+            {
+                name: specch,
+                id: 3759347
+            },
+            ...
+        ],
+        predictions: [
+            {
+                id: 12345,
+                category_tsr_fname: 12345.npy
+                scanned_segment: [10.5, 97.8]
+                scanned_num_chunks: 750
+                per_chunk_length: 0.96 (in seconds)
+                meta: {} an optional payload copied verbatim from the inputs
+            }
+            ...
+        ]
+    }
+    """
+    def __init__(self, output_dir, pred_category_meta):
+        self.logger = logging.getLogger(__name__)
+        self.output_dir = output_dir
+        self.pred_category_meta = pred_category_meta
+        self.TSR_DUMP_DIR = 'audio_pred'
+        self.PRED_FNAME = 'audio_pred.json'
+        os.makedirs(osp.join(self.output_dir, self.TSR_DUMP_DIR), exist_ok=True)
+
+    def reset(self):
+        self._predictions = []
+
+    def process(self, inputs, outputs):
+        for in_payload, out_payload in zip(inputs, outputs):
+            # 1. save the audio category tensor
+            audio_id = in_payload['id']
+            category_tsr_fname = '{}.npy'.format(audio_id)
+            np.save(
+                osp.join(self.output_dir, self.TSR_DUMP_DIR, category_tsr_fname),
+                out_payload['pred_tsr'].numpy()
+            )
+            # 2. record the prediction metadata
+            pred = {
+                'id': audio_id,
+                'category_tsr_fname': category_tsr_fname,
+                'scanned_segment': '',
+                'scanned_num_chunks': '',
+                'per_chunk_length': '',
+                'meta': '' if 'meta' not in in_payload else in_payload['meta']
+            }
+            self._predictions.append(pred)
+
+    def evaluate(self):
+        comm.synchronize()
+        predictions = comm.gather(self._predictions)
+        predictions = list(itertools.chain(*self._predictions))
+        if not comm.is_main_process():
+            return None
+
+        payload = {
+            'model': 'vggish',
+            'model_categories': self.pred_category_meta,
+            'predictions': predictions
+        }
+
+        with open(osp.join(self.output_dir, self.PRED_FNAME), 'w') as f:
+            json.dump(payload, f)

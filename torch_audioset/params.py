@@ -22,6 +22,10 @@ class CommonParams():
     # convert input audio to segments
     PATCH_WINDOW_IN_SECONDS = 0.96
 
+    # largest batch size at test time
+    VGGISH_BATCH_SIZE = 16
+    YAMNET_BATCH_SIZE = 32
+
 
 class VGGishParams():
     # Copyright 2017 The TensorFlow Authors All Rights Reserved.
