@@ -1,3 +1,7 @@
+.vscode/
+exp/
+tools/output
+
 build/
 dist/
 *.egg-info/
