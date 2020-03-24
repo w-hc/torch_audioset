@@ -45,7 +45,8 @@ def classify_audio_dataset(dataset, output_dir):
 
     # 2. create data loader
     loader = torch.utils.data.DataLoader(
-        dataset, num_workers=0, batch_size=1, collate_fn=trivial_collate_fn,
+        dataset, num_workers=CommonParams.NUM_LOADERS,
+        batch_size=1, collate_fn=trivial_collate_fn,
     )
 
     # 3. create evaluator

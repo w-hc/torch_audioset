@@ -26,6 +26,9 @@ class CommonParams():
     VGGISH_CHUNK_SIZE = 128
     YAMNET_CHUNK_SIZE = 256
 
+    # num of data loading threads
+    NUM_LOADERS = 4
+
 
 class VGGishParams():
     # Copyright 2017 The TensorFlow Authors All Rights Reserved.
