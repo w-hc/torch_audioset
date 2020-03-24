@@ -44,7 +44,6 @@ def classify_audio_dataset(dataset, output_dir):
     pred_category_meta = vggish_category_metadata()
 
     # 2. create data loader
-    # FIXME: where to do the partitioning?
     loader = torch.utils.data.DataLoader(
         dataset, num_workers=0, batch_size=1, collate_fn=trivial_collate_fn,
     )
