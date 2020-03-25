@@ -2,6 +2,10 @@ import os
 import os.path as osp
 import json
 from typing import List
+from ..utils import mapify_iterable
+
+__all__ = ['AudioSetOntology', ]
+
 
 '''
 The ontology json file format
@@ -19,9 +23,56 @@ restrictions:       ['abstract', 'blacklist'] a list of optional tags.
 
 
 class TreeNode():
-    def __init__(self, category):
-        self.category = category
-        self.children = []
+    def __init__(self, meta):
+        self.meta = meta
+        self.id = meta['id']
+        self.name = meta['name']
+        self.is_concrete = 'abstract' not in meta['restrictions']
+        self.children = dict()
+        self.parent = None
+
+    def __repr__(self):
+        s = 'name: {}; '.format(self.name)
+        s += 'children: {}'.format(self.display_children_info(print_out=False))
+        return s
+
+    def display_children_info(self, print_out=True):
+        accu = []
+        for name, node in self.children.items():
+            accu.append(name)
+        if print_out:
+            print(accu)
+        else:
+            return accu
+
+    def add_child(self, c_node):
+        self.children[c_node.name] = c_node
+
+    def get_child(self, c_name):
+        return self.children[c_name]
+
+    @classmethod
+    def trace(cls, node, trace: List):
+        assert isinstance(trace, list)
+        if len(trace) == 0:
+            return node
+        else:
+            key = trace[0]
+            child = node.children[key]
+            return cls.trace(child, trace[1:])
+
+    @classmethod
+    def get_non_abstract_from_below(cls, start_node):
+        accu = []
+
+        def traverse(node):
+            if node.is_concrete:
+                accu.append(node)
+            for name, child in node.children.items():
+                traverse(child)
+
+        traverse(start_node)
+        return accu
 
 
 class AudioSetOntology():
@@ -29,56 +80,42 @@ class AudioSetOntology():
         dir_of_this_mod = osp.dirname(osp.abspath(__file__))
         fname = osp.join(dir_of_this_mod, 'ontology.json')
         with open(fname, 'r') as f:
-            self.raw = json.load(f)
+            raw = json.load(f)
+        self.raw = mapify_iterable(raw, 'id')
+        self.tree = self.build_tree(self.raw)
 
-        # non-abstract classes
-        leaf_cats = []
-        node_cats = []
-        hard_cats = []
-        for category in self.raw:
-            restrictions = category['restrictions']
-            if len(restrictions) == 0:
-                leaf_cats.append(category)
-            elif 'abstract' in restrictions:
-                node_cats.append(category)
-            else:
-                assert 'blacklist' in restrictions
-                hard_cats.append(category)
-        print(len(leaf_cats))
-        print(len(node_cats))
-        print(len(hard_cats))
-        size = len(leaf_cats) + len(node_cats) + len(hard_cats)
+    @staticmethod
+    def build_tree(id_2_meta):
+        tree_accu = dict()
+        candidates = list(id_2_meta.keys())
 
-    def build_tree(self):
-        pass
+        def create(id):
+            '''recursively build up an ontology tree'''
+            if id in tree_accu:
+                return tree_accu[id]
+            meta = id_2_meta[id]
+            node = TreeNode(meta)
+            child_ids = meta['child_ids']
+            for cid in child_ids:
+                c_node = create(cid)
+                c_node.parent = node
+                node.add_child(c_node)
+            tree_accu[id] = node
+            return node
+
+        for c in candidates:
+            create(c)
+
+        # put those nodes without parents under the root node
+        rootNode = TreeNode(
+            meta={'id': 'root', 'name': 'root', 'restrictions': ['abstract']}
+        )
+        for _, node in tree_accu.items():
+            if node.parent is None:
+                rootNode.add_child(node)
+                node.parent = rootNode
+
+        return rootNode
 
     def query(self, tracer_list: List[str]):
         pass
-
-
-def compute_data_usage():
-    num_secs = 900 * 3600
-    num_bytes = bytes_over_length_in_secs(num_secs)
-    MB = bytes_to(num_bytes, 'MB')
-    GB = bytes_to(num_bytes, 'GB')
-    print('{:.3f}MB and {:.3f}GB'.format(MB, GB))
-
-
-def bytes_over_length_in_secs(num_secs):
-    bytes_per_960ms = 527 * 4
-    num_segments = num_secs / 0.960
-    return num_segments * bytes_per_960ms
-
-
-def bytes_to(num_bytes, unit='MB'):
-    assert unit in ('MB', 'GB')
-    degrees = {
-        'MB': 2,
-        'GB': 3
-    }
-    return num_bytes / (1024 ** degrees[unit])
-
-
-if __name__ == "__main__":
-    # m = AudioSetOntology()
-    compute_data_usage()
