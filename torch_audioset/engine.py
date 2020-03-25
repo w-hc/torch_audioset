@@ -123,12 +123,13 @@ class SoundLabelingEvaluator(DatasetEvaluator):
         ]
     }
     """
+    TSR_DUMP_DIR = 'audio_pred'
+    PRED_FNAME = 'audio_pred.json'
+
     def __init__(self, output_dir, pred_category_meta):
         self.logger = logging.getLogger(__name__)
         self.output_dir = output_dir
         self.pred_category_meta = pred_category_meta
-        self.TSR_DUMP_DIR = 'audio_pred'
-        self.PRED_FNAME = 'audio_pred.json'
         os.makedirs(osp.join(self.output_dir, self.TSR_DUMP_DIR), exist_ok=True)
 
     def reset(self):
@@ -156,7 +157,7 @@ class SoundLabelingEvaluator(DatasetEvaluator):
     def evaluate(self):
         comm.synchronize()
         predictions = comm.gather(self._predictions)
-        predictions = list(itertools.chain(*self._predictions))
+        predictions = list(itertools.chain(*predictions))
         if not comm.is_main_process():
             return None
 
