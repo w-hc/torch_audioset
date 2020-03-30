@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 import torchaudio as ta
 from torch_audioset.data.torch_input_processing import WaveformToInput as TorchTransform
 from torch_audioset.data.tflow_input_processing import WaveformToInput as TflowTransform
@@ -29,10 +30,10 @@ def real_siren_data():
     return x, sr
 
 
-def main():
-    # x, sr, _ = sinusoidal_data()
-    x, sr = real_siren_data()
-    torch_data = TorchTransform()(x, sr)
+def torch_vs_vggish():
+    x, sr, _ = sinusoidal_data()
+    # x, sr = real_siren_data()
+    torch_data = TorchTransform()(torch.from_numpy(x), sr)
     tflow_data = TflowTransform(method='vggish')(x, sr)
     assert torch_data.shape == tflow_data.shape
     print("mean torch {:.5f} vs tflow {:.5f}".format(
@@ -43,27 +44,57 @@ def main():
     ))
 
 
+def torch_vs_yamnet():
+    # x, sr, _ = sinusoidal_data()
+    x, sr = real_siren_data()
+    torch_data = TorchTransform()(torch.from_numpy(x), sr)
+    yamnet_data = TflowTransform(method='yamnet')(x, sr).numpy()
+    yamnet_data = yamnet_data[:, None, :, :]
+    assert yamnet_data.shape == torch_data.shape
+    print("mean torch {:.5f} vs yamnet {:.5f}".format(
+        torch_data.mean(), yamnet_data.mean()
+    ))
+    print("std  torch {:.5f} vs yamnet {:.5f}".format(
+        torch_data.std(), yamnet_data.std()
+    ))
+
+
 if __name__ == "__main__":
-    main()
+    # torch_vs_vggish()
+    torch_vs_yamnet()
 
 
 '''
-Input processing: torch vs vggish tflow
+Input processing test:
+When LOG_OFFSET = 0.01 (vggish)
 1. on sinusoidal test data, the two differ by a little bit.
     sqrting the STFT magnitude matters little
     When sqrt is on:
-        mean torch -3.42271 vs tflow -3.26085
-        std  torch 2.12663 vs tflow 2.05112
+        mean torch -3.42271 vs vggish -3.26085
+        std  torch 2.12663 vs vggish 2.05112
+        mean torch -3.42271 vs yamnet -3.99316
+        std  torch 2.12663 vs yamnet 2.41078
     When sqrt is off:
-        mean torch -3.63301 vs tflow -3.26085
-        std  torch 2.95379 vs tflow 2.05112
+        mean torch -3.63301 vs vggish -3.26085
+        std  torch 2.95379 vs vggish 2.05112
 2. However, on real siren data, sqrting the STFT is critical
     When sqrt is on:
-        mean torch -0.87242 vs tflow -0.85927
-        std  torch 1.37589 vs tflow 1.37079
+        mean torch -0.87242 vs vggish -0.85927
+        std  torch 1.37589 vs vggish 1.37079
+        mean torch -0.87242 vs yamnet -0.90228
+        std  torch 1.37589 vs yamnet 1.40717
     When sqrt is off:
-        mean torch -2.13134 vs tflow -0.85927
-        std  torch 2.46712 vs tflow 1.37079
+        mean torch -2.13134 vs vggish -0.85927
+        std  torch 2.46712 vs vggish 1.37079
 
 'Tis clear that you have to sqrt the STFT magnitude
+YAMNet is somewhat different from the rest; but should be okay to use
+
+When LOG_OFFSET = 0.001 (yamnet)
+# sinusoidal data
+mean torch -4.58918 vs yamnet -3.99316
+std  torch 2.75272 vs yamnet 2.41078
+# siren data
+mean torch -0.91622 vs yamnet -0.90228
+std  torch 1.41301 vs yamnet 1.40717
 '''
