@@ -1,4 +1,5 @@
 import torch
+import resampy
 from .vggish_utils import mel_features
 from .yamnet_utils import features as features_lib
 from ...params import VGGishParams, YAMNetParams
@@ -17,7 +18,6 @@ class WaveformToInput():
         Returns:
             batched torch tsr of shape [N, C, T]
         '''
-        waveform = waveform.T
         func = vggish_transform if self.method == 'vggish' else yamnet_transform
         return func(waveform, sample_rate)
 
@@ -28,8 +28,7 @@ def vggish_transform(waveform, sample_rate):
         waveform: np tsr [num_steps, num_channels]
         sample_rate: per second sample rate
     '''
-    import resampy
-    data = waveform.mean(axis=1)
+    data = waveform.mean(axis=0)
     # Resample to the rate assumed by VGGish.
     if sample_rate != VGGishParams.SAMPLE_RATE:
         data = resampy.resample(data, sample_rate, VGGishParams.SAMPLE_RATE)
@@ -68,11 +67,12 @@ def yamnet_transform(waveform, sample_rate):
         waveform: np tsr [num_steps, num_channels]
         sample_rate: per second sample rate
     '''
-    # FIXME need to make this run somehow in "eager" mode
     import tensorflow as tf
-    spectrogram = features_lib.waveform_to_log_mel_spectrogram(
-        tf.squeeze(waveform, axis=0), YAMNetParams
-    )  # BUG why is the squeeze here?
+    tf.enable_eager_execution()
+    data = waveform.mean(axis=0)
+    if sample_rate != YAMNetParams.SAMPLE_RATE:
+        data = resampy.resample(data, sample_rate, VGGishParams.SAMPLE_RATE)
+    spectrogram = features_lib.waveform_to_log_mel_spectrogram(data, YAMNetParams)
     patches = features_lib.spectrogram_to_patches(
         spectrogram, YAMNetParams
     )
