@@ -1,7 +1,10 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch import hub
 from ..params import YAMNetParams
+
+ckpt_url = "https://github.com/w-hc/torch_audioset/releases/download/v0.1/yamnet.pth"
 
 
 class Conv2d_tf(nn.Conv2d):
@@ -145,3 +148,11 @@ class YAMNet(nn.Module):
         if to_prob:
             x = torch.sigmoid(x)
         return x
+
+
+def yamnet(pretrained=True):
+    model = YAMNet()
+    if pretrained:
+        state_dict = hub.load_state_dict_from_url(ckpt_url, progress=True)
+        model.load_state_dict(state_dict)
+    return model

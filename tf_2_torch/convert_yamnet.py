@@ -5,7 +5,7 @@ import numpy as np
 import h5py
 from h5py import Dataset
 import tensorflow as tf
-from torch_yamnet import YAMNet as PT_YAMNet
+from torch_audioset.yamnet.model import yamnet as torch_yamnet
 import params as tf_params
 
 
@@ -128,7 +128,7 @@ def main():
     spec, patches, tf_pred = tf_model(snd)
     # spec: [298, 64], patches: [5, 96, 64]
 
-    pt_model = PT_YAMNet()
+    pt_model = torch_yamnet(pretrained=False)
     load_tf_weights(
         pt_model.state_dict(), load_keras_weight_in_pt_format(ckpt_path)
     )
@@ -149,6 +149,7 @@ def main():
     assert pt_pred.shape == tf_pred.shape
     assert np.allclose(pt_pred, tf_pred, atol=1e-6)
     print('conversion succeed')
+    torch.save(pt_model.state_dict(), './yamnet.pth')
 
 
 if __name__ == "__main__":
