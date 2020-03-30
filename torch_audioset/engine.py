@@ -8,7 +8,8 @@ from .params import CommonParams
 from .utils.logger import setup_logger
 from .utils import comm
 from .evaluator import inference_on_dataset, DatasetEvaluator
-from .vggish import get_vggish, vggish_category_metadata
+# from .vggish import get_vggish, vggish_category_metadata
+from .yamnet import yamnet, yamnet_category_metadata
 from .data.torch_input_processing import WaveformToInput
 
 import itertools
@@ -38,10 +39,10 @@ def classify_audio_dataset(dataset, output_dir):
 
     # 1. create model
     model = AudioLabeler(
-        model=get_vggish(with_classifier=True, pretrained=True),
+        model=yamnet(pretrained=True),
         tt_chunk_size=CommonParams.VGGISH_CHUNK_SIZE
     )
-    pred_category_meta = vggish_category_metadata()
+    pred_category_meta = yamnet_category_metadata()
 
     # 2. create data loader
     loader = torch.utils.data.DataLoader(

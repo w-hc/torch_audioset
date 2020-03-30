@@ -17,7 +17,7 @@ class CommonParams():
     NUM_MEL_BANDS = 64
     MEL_MIN_HZ = 125
     MEL_MAX_HZ = 7500
-    LOG_OFFSET = 0.01  # FIXME 0.01 for vggish, and 0.001 for yamnet
+    LOG_OFFSET = 0.001  # NOTE 0.01 for vggish, and 0.001 for yamnet
 
     # convert input audio to segments
     PATCH_WINDOW_IN_SECONDS = 0.96
