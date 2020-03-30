@@ -1,8 +1,12 @@
+import os.path as osp
+import yaml
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch import hub
 from ..params import YAMNetParams
+
+__all__ = ['yamnet', 'yamnet_category_metadata']
 
 ckpt_url = "https://github.com/w-hc/torch_audioset/releases/download/v0.1/yamnet.pth"
 
@@ -148,6 +152,15 @@ class YAMNet(nn.Module):
         if to_prob:
             x = torch.sigmoid(x)
         return x
+
+
+def yamnet_category_metadata():
+    cat_meta_file = osp.join(
+        osp.dirname(osp.realpath(__file__)), 'yamnet_category_meta.yml'
+    )
+    with open(cat_meta_file) as f:
+        cat_meta = yaml.safe_load(f)
+    return cat_meta
 
 
 def yamnet(pretrained=True):
