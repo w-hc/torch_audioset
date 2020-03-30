@@ -142,7 +142,7 @@ class YAMNet(nn.Module):
 
         self.classifier = nn.Linear(input_dim, 521, bias=True)
 
-    def forward(self, x, to_prob=True):
+    def forward(self, x, to_prob=False):
         for name in self.layer_names:
             mod = getattr(self, name)
             x = mod(x)
