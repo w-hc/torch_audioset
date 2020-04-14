@@ -10,6 +10,8 @@ from .utils import mapify_iterable
 from .audioset_ontology.ontology import TreeNode
 from tqdm import tqdm
 
+__all__ = ['AudioCategoryLabels']
+
 
 class AudioCategoryLabels():
     def __init__(self, root, pooling_window_size=5, stride=1):
