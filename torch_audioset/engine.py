@@ -115,8 +115,6 @@ class SoundLabelingEvaluator(DatasetEvaluator):
             {
                 id: 12345,
                 category_tsr_fname: 12345.npy
-                scanned_segment: [10.5, 97.8]
-                scanned_num_chunks: 750
                 per_chunk_length: 0.96 (in seconds)
                 meta: {} an optional payload copied verbatim from the inputs
             }
