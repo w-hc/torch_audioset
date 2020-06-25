@@ -12,6 +12,11 @@ from tqdm import tqdm
 
 __all__ = ['AudioCategoryLabels']
 
+_POOLING_FUNC = {
+    'ave': F.avg_pool1d,
+    'max': F.max_pool1d
+}['max']
+
 
 class AudioCategoryLabels():
     def __init__(self, root, pooling_window_size=5, stride=1):
@@ -86,7 +91,7 @@ class AudioCategoryLabels():
         padding = (pooling_window_size - 1) // 2
         tsr = torch.from_numpy(tsr).cuda()
         tsr = tsr.T.unsqueeze(dim=0)  # [T, K]  -> [1, K, T]
-        tsr = F.max_pool1d(
+        tsr = _POOLING_FUNC(
             tsr, kernel_size=pooling_window_size, stride=stride, padding=padding
         )
         tsr = tsr.squeeze(0).T
