@@ -55,6 +55,33 @@ class WaveformToInput(torch.nn.Module):
         x = x.reshape(num_chunks, 1, window_size_in_frames, x.shape[-1])
         return x
 
+    def wavform_to_log_mel(self, waveform, sample_rate):
+        '''
+        Args:
+            waveform: torch tsr [num_audio_channels, num_time_steps]
+            sample_rate: per second sample rate
+        Returns:
+            batched torch tsr of shape [N, C, T]
+        '''
+        x = waveform.mean(axis=0, keepdims=True)  # average over channels
+        resampler = ta_trans.Resample(sample_rate, CommonParams.TARGET_SAMPLE_RATE)
+        x = resampler(x)
+        x = self.mel_trans_ope(x)
+        x = x.squeeze(dim=0).T  # # [1, C, T] -> [T, C]
+        spectrogram = x.cpu().numpy().copy()
+
+        window_size_in_frames = int(round(
+            CommonParams.PATCH_WINDOW_IN_SECONDS / CommonParams.STFT_HOP_LENGTH_SECONDS
+        ))
+        num_chunks = x.shape[0] // window_size_in_frames
+
+        # reshape into chunks of non-overlapping sliding window
+        num_frames_to_use = num_chunks * window_size_in_frames
+        x = x[:num_frames_to_use]
+        # [num_chunks, 1, window_size, num_freq]
+        x = x.reshape(num_chunks, 1, window_size_in_frames, x.shape[-1])
+        return x, spectrogram
+
 
 class VGGishLogMelSpectrogram(ta_trans.MelSpectrogram):
     '''
