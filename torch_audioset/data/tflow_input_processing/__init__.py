@@ -68,7 +68,7 @@ def yamnet_transform(waveform, sample_rate):
         sample_rate: per second sample rate
     '''
     import tensorflow as tf
-    tf.enable_eager_execution()
+    # tf.enable_eager_execution()
     data = waveform.mean(axis=0)
     if sample_rate != YAMNetParams.SAMPLE_RATE:
         data = resampy.resample(data, sample_rate, VGGishParams.SAMPLE_RATE)
