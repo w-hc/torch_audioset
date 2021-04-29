@@ -29,7 +29,7 @@ if __name__ == '__main__':
     waveforms, sr = sf_load_from_int16(wav_fname)
     waveform = waveforms[0]
     waveform_for_torch = torch.tensor(waveforms)
-    patches, spectrogram = TorchTransform().wavform_to_log_mel(waveform_for_torch, 16000)
+    patches, spectrogram = TorchTransform().wavform_to_log_mel(waveform_for_torch, 16000, patch_hop_seconds=1.0)
 
     pt_model = torch_yamnet(pretrained=False)
     # Manually download the `yamnet.pth` file.

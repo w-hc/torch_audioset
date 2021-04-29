@@ -1,7 +1,8 @@
 import numpy as np
 import torch
 import torchaudio.transforms as ta_trans
-from ..params import CommonParams
+
+from ..params import CommonParams, YAMNetParams
 
 
 class WaveformToInput(torch.nn.Module):
@@ -55,7 +56,7 @@ class WaveformToInput(torch.nn.Module):
         x = x.reshape(num_chunks, 1, window_size_in_frames, x.shape[-1])
         return x
 
-    def wavform_to_log_mel(self, waveform, sample_rate):
+    def wavform_to_log_mel(self, waveform, sample_rate, patch_hop_seconds=YAMNetParams.PATCH_HOP_SECONDS):
         '''
         Args:
             waveform: torch tsr [num_audio_channels, num_time_steps]
@@ -73,13 +74,30 @@ class WaveformToInput(torch.nn.Module):
         window_size_in_frames = int(round(
             CommonParams.PATCH_WINDOW_IN_SECONDS / CommonParams.STFT_HOP_LENGTH_SECONDS
         ))
-        num_chunks = x.shape[0] // window_size_in_frames
 
-        # reshape into chunks of non-overlapping sliding window
-        num_frames_to_use = num_chunks * window_size_in_frames
-        x = x[:num_frames_to_use]
-        # [num_chunks, 1, window_size, num_freq]
-        x = x.reshape(num_chunks, 1, window_size_in_frames, x.shape[-1])
+        if patch_hop_seconds == YAMNetParams.PATCH_HOP_SECONDS:
+            num_chunks = x.shape[0] // window_size_in_frames
+
+            # reshape into chunks of non-overlapping sliding window
+            num_frames_to_use = num_chunks * window_size_in_frames
+            x = x[:num_frames_to_use]
+            # [num_chunks, 1, window_size, num_freq]
+            x = x.reshape(num_chunks, 1, window_size_in_frames, x.shape[-1])
+        else:  # generate chunks with custom sliding window length `patch_hop_seconds`
+            patch_hop_in_frames = int(round(
+                patch_hop_seconds / CommonParams.STFT_HOP_LENGTH_SECONDS
+            ))
+            # TODO performance optimization with zero copy
+            patch_hot_num_chunks = x.shape[0] // patch_hop_in_frames
+            num_frames_to_use = patch_hot_num_chunks * patch_hop_in_frames
+            x = x[:num_frames_to_use]
+            x_in_frames = x.reshape(-1, x.shape[-1])
+            x_output = np.empty((patch_hot_num_chunks, window_size_in_frames, x.shape[-1]))
+            for i in range(patch_hot_num_chunks):
+                start_frame = i * patch_hop_in_frames
+                x_output[i] = x_in_frames[start_frame: start_frame + window_size_in_frames]
+            x = x_output.reshape(patch_hot_num_chunks, 1, window_size_in_frames, x.shape[-1])
+            x = torch.tensor(x, dtype=torch.float32)
         return x, spectrogram
 
 
@@ -88,6 +106,7 @@ class VGGishLogMelSpectrogram(ta_trans.MelSpectrogram):
     This is a _log_ mel-spectrogram transform that adheres to the transform
     used by Google's vggish model input processing pipeline
     '''
+
     def forward(self, waveform):
         r"""
         Args:
