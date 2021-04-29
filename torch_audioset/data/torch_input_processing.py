@@ -56,7 +56,7 @@ class WaveformToInput(torch.nn.Module):
         x = x.reshape(num_chunks, 1, window_size_in_frames, x.shape[-1])
         return x
 
-    def wavform_to_log_mel(self, waveform, sample_rate, patch_hop_seconds=YAMNetParams.PATCH_HOP_SECONDS):
+    def wavform_to_log_mel(self, waveform, sample_rate):
         '''
         Args:
             waveform: torch tsr [num_audio_channels, num_time_steps]
@@ -75,7 +75,7 @@ class WaveformToInput(torch.nn.Module):
             CommonParams.PATCH_WINDOW_IN_SECONDS / CommonParams.STFT_HOP_LENGTH_SECONDS
         ))
 
-        if patch_hop_seconds == YAMNetParams.PATCH_HOP_SECONDS:
+        if YAMNetParams.PATCH_HOP_SECONDS == YAMNetParams.PATCH_WINDOW_SECONDS:
             num_chunks = x.shape[0] // window_size_in_frames
 
             # reshape into chunks of non-overlapping sliding window
@@ -85,7 +85,7 @@ class WaveformToInput(torch.nn.Module):
             x = x.reshape(num_chunks, 1, window_size_in_frames, x.shape[-1])
         else:  # generate chunks with custom sliding window length `patch_hop_seconds`
             patch_hop_in_frames = int(round(
-                patch_hop_seconds / CommonParams.STFT_HOP_LENGTH_SECONDS
+                YAMNetParams.PATCH_HOP_SECONDS / CommonParams.STFT_HOP_LENGTH_SECONDS
             ))
             # TODO performance optimization with zero copy
             patch_hot_num_chunks = x.shape[0] // patch_hop_in_frames

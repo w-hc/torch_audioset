@@ -131,4 +131,5 @@ class YAMNetParams():
 
 
 # NOTE for our inference, don't need overlapping windows
-YAMNetParams.PATCH_HOP_SECONDS = YAMNetParams.PATCH_WINDOW_SECONDS
+# YAMNetParams.PATCH_HOP_SECONDS = YAMNetParams.PATCH_WINDOW_SECONDS
+YAMNetParams.PATCH_HOP_SECONDS = 1.0
