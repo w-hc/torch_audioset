@@ -88,15 +88,15 @@ class WaveformToInput(torch.nn.Module):
                 YAMNetParams.PATCH_HOP_SECONDS / CommonParams.STFT_HOP_LENGTH_SECONDS
             ))
             # TODO performance optimization with zero copy
-            patch_hot_num_chunks = x.shape[0] // patch_hop_in_frames
-            num_frames_to_use = patch_hot_num_chunks * patch_hop_in_frames
+            patch_hop_num_chunks = (x.shape[0] - window_size_in_frames) // patch_hop_in_frames + 1
+            num_frames_to_use = window_size_in_frames + (patch_hop_num_chunks - 1) * patch_hop_in_frames
             x = x[:num_frames_to_use]
             x_in_frames = x.reshape(-1, x.shape[-1])
-            x_output = np.empty((patch_hot_num_chunks, window_size_in_frames, x.shape[-1]))
-            for i in range(patch_hot_num_chunks):
+            x_output = np.empty((patch_hop_num_chunks, window_size_in_frames, x.shape[-1]))
+            for i in range(patch_hop_num_chunks):
                 start_frame = i * patch_hop_in_frames
                 x_output[i] = x_in_frames[start_frame: start_frame + window_size_in_frames]
-            x = x_output.reshape(patch_hot_num_chunks, 1, window_size_in_frames, x.shape[-1])
+            x = x_output.reshape(patch_hop_num_chunks, 1, window_size_in_frames, x.shape[-1])
             x = torch.tensor(x, dtype=torch.float32)
         return x, spectrogram
 
