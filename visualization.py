@@ -56,17 +56,25 @@ if __name__ == '__main__':
     plt.xlim([0, len(waveform)])
     # Plot the log-mel spectrogram (returned by the model).
     plt.subplot(3, 1, 2)
-    plt.imshow(spectrogram.T, aspect='auto', interpolation='nearest', origin='lower')
+    extent = (0, spectrogram.shape[0], -0.5, spectrogram.shape[1] - 0.5)
+    plt.imshow(spectrogram.T, aspect='auto', interpolation='nearest', origin='lower', extent=extent)
+    plt.xlim([0, len(waveform) / sr / YAMNetParams.STFT_HOP_SECONDS])
 
     # Plot and label the model output scores for the top-scoring classes.
     mean_scores = np.mean(scores, axis=0)
     top_N = 10
     top_class_indices = np.argsort(mean_scores)[::-1][:top_N]
+
     plt.subplot(3, 1, 3)
-    plt.imshow(scores[:, top_class_indices].T, aspect='auto', interpolation='nearest', cmap='gray_r')
+    scores_top_class = scores[:, top_class_indices].T
+    # https://matplotlib.org/stable/tutorials/intermediate/imshow_extent.html
+    extent = (0, scores_top_class.shape[1] * YAMNetParams.PATCH_HOP_SECONDS, scores_top_class.shape[0] - 0.5, -0.5)
+    plt.imshow(scores_top_class, aspect='auto', interpolation='nearest', cmap='gray_r', extent=extent)
     # TODO Compensate for the PATCH_WINDOW_SECONDS (0.96 s) context window to align with spectrogram.
-    patch_padding = (params.PATCH_WINDOW_SECONDS / 2) / params.PATCH_HOP_SECONDS
-    plt.xlim([-patch_padding, scores.shape[0] + patch_padding])
+    # patch_padding = (params.PATCH_WINDOW_SECONDS / 2) / params.PATCH_HOP_SECONDS
+    # plt.xlim([-patch_padding, scores.shape[0] + patch_padding])
+    plt.xlim([0, len(waveform) / sr])
+
     # Label the top_N classes.
     yticks = range(0, top_N, 1)
     plt.yticks(yticks, [class_names[top_class_indices[x]] for x in yticks])
