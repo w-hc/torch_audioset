@@ -137,7 +137,7 @@ def main():
         pt_model.eval()
         x = torch.from_numpy(patches)
         x = x.unsqueeze(1)  # [5, 96, 64] -> [5, 1, 96, 64]
-        pt_pred = pt_model(x)
+        pt_pred = pt_model(x, to_prob=True)
         pt_pred = pt_pred.numpy()
 
     print(pt_pred.shape)
