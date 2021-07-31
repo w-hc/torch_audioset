@@ -16,8 +16,11 @@ class Conv2d_tf(nn.Conv2d):
     Conv2d with the padding behavior from TF Slim
     """
     def __init__(self, *args, **kwargs):
+        # remove padding argument to avoid conflict
+        padding = kwargs.pop("padding", "SAME")
+        # initialize nn.Conv2d
         super().__init__(*args, **kwargs)
-        self.padding = kwargs.get("padding", "SAME")
+        self.padding = padding
         assert self.padding == "SAME"
         self.num_kernel_dims = 2
         self.forward_func = lambda input, padding: F.conv2d(
