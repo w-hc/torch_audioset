@@ -9,7 +9,9 @@ If you search online you can find pytorch versions of VGGish, but not YAMNet. Th
 
 In addition there is a pipeline for audio file labeling. 
 
-## To convert weights
+## To convert weights 
+2025 update: the converted torch YAMNet model weight can be downloaded [here](https://github.com/w-hc/torch_audioset/releases/download/v0.1/yamnet.pth) at the release page. The environment dependencies have changed and the script itself needs some update. 
+
 You may install the package in developer mode using 
 ```bash
 pip install --editable .
